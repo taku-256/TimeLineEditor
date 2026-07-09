@@ -52,7 +52,7 @@ npm run build
 
 ## GitHub Pages での公開手順
 
-このプロジェクトは `vite.config.ts` で相対パス (`base: './'`) が設定されているため、ビルドされた `dist/` ディレクトリのファイルをそのまま GitHub Pages にデプロイできます。
+このプロジェクトは `vite.config.ts` で相対パス (`base: './'`) が設定されているため、ビルドされた `dist/` ディレクトリのファイルをそのまま GitHub Pages にデプロイすることが可能です。
 
 ### 方法1: `gh-pages` パッケージを使用する場合
 
