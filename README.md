@@ -52,31 +52,30 @@ npm run build
 
 ## GitHub Pages での公開手順
 
-このプロジェクトは `vite.config.ts` で相対パス (`base: './'`) が設定されているため、ビルドされた `dist/` ディレクトリのファイルをそのまま GitHub Pages にデプロイすることが可能です。
+このプロジェクトは `vite.config.ts` でベースパスが `base: '/TimeLineEditor/'` に設定されており、GitHub Pages 上のサブディレクトリで正しく稼働するよう構成されています。
 
-### 方法1: `gh-pages` パッケージを使用する場合
+公開ページは以下のURLです：
+[https://taku-256.github.io/TimeLineEditor/](https://taku-256.github.io/TimeLineEditor/)
 
-1. `gh-pages` パッケージをインストールします：
+### 公開の自動化 (GitHub Actions)
+リポジトリの **Settings -> Pages -> Build and deployment -> Source** で **「GitHub Actions」** を選択した状態で `main` ブランチにプッシュすると、`.github/workflows/deploy.yml` により自動ビルドとデプロイが行われます。
+
+### 方法1: ローカルから `gh-pages` コマンドで手動デプロイする場合
+1. パッケージを追加：
    ```bash
    npm install -D gh-pages
    ```
-
-2. `package.json` の `scripts` にデプロイコマンドを追加します：
+2. `package.json` にスクリプトを追加：
    ```json
    "scripts": {
      "predeploy": "npm run build",
      "deploy": "gh-pages -d dist"
    }
    ```
-
-3. 以下のコマンドで公開を実行します：
+3. 実行：
    ```bash
    npm run deploy
    ```
-
-### 方法2: GitHub Actions を使用する場合
-
-`.github/workflows/deploy.yml` などのワークフローを作成し、`npm run build` を経て `dist/` ディレクトリを `github-pages` にデプロイする設定を行います。
 
 ---
 

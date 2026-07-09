@@ -112,6 +112,11 @@ export class PropertyPanel {
         <div class="prop-divider"></div>
 
         <div class="prop-group">
+          <label class="prop-label">Score Effect</label>
+          <input class="prop-input" type="number" id="prop-score" value="${block.scoreEffect ?? 0}" step="1" />
+        </div>
+
+        <div class="prop-group">
           <label class="prop-label">Memo</label>
           <textarea class="prop-textarea" id="prop-memo" rows="3">${this.escapeHtml(block.memo)}</textarea>
         </div>
@@ -155,6 +160,12 @@ export class PropertyPanel {
     bufferInput?.addEventListener('change', () => {
       const val = parseFloat(bufferInput.value);
       if (!isNaN(val)) this.stateManager.updateBlock(blockId, { bufferDuration: Math.max(0, val) });
+    });
+
+    const scoreInput = this.container.querySelector('#prop-score') as HTMLInputElement;
+    scoreInput?.addEventListener('change', () => {
+      const val = parseInt(scoreInput.value, 10);
+      this.stateManager.updateBlock(blockId, { scoreEffect: isNaN(val) ? 0 : val });
     });
 
     const memoInput = this.container.querySelector('#prop-memo') as HTMLTextAreaElement;
@@ -211,6 +222,11 @@ export class PropertyPanel {
           </div>
         </div>
 
+        <div class="prop-group">
+          <label class="prop-label">Score Effect</label>
+          <input class="prop-input" type="number" id="prop-event-score" value="${event.scoreEffect ?? 0}" step="1" />
+        </div>
+
         <div class="prop-actions">
           <button class="prop-btn danger" id="prop-event-delete">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -249,6 +265,12 @@ export class PropertyPanel {
         this.stateManager.updateEvent(eventId, { color });
         this.update();
       });
+    });
+
+    const scoreInput = this.container.querySelector('#prop-event-score') as HTMLInputElement;
+    scoreInput?.addEventListener('change', () => {
+      const val = parseInt(scoreInput.value, 10);
+      this.stateManager.updateEvent(eventId, { scoreEffect: isNaN(val) ? 0 : val });
     });
 
     this.container.querySelector('#prop-event-delete')?.addEventListener('click', () => {

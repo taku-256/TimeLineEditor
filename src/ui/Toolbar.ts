@@ -63,6 +63,9 @@ export class Toolbar {
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
             <span>Lane</span>
           </button>
+          <button class="toolbar-btn ${project.vGoalTime !== undefined ? 'active' : ''}" id="btn-vgoal-toggle" title="Toggle V-Goal Target Line">
+            <span>👑 V-Goal</span>
+          </button>
         </div>
 
         <div class="toolbar-divider"></div>
@@ -75,6 +78,9 @@ export class Toolbar {
             <option value="1" ${project.snapInterval === 1 ? 'selected' : ''}>1s</option>
             <option value="off" ${project.snapInterval === null ? 'selected' : ''}>OFF</option>
           </select>
+          <button class="toolbar-btn ${project.magnetEnabled !== false ? 'active' : ''}" id="btn-magnet" title="Toggle Magnet Snapping to block edges and events">
+            <span>🧲 Magnet</span>
+          </button>
         </div>
 
         <div class="toolbar-group">
@@ -195,6 +201,26 @@ export class Toolbar {
       this.stateManager.toggleTheme();
     });
 
+    // Magnet toggle
+    this.container.querySelector('#btn-magnet')?.addEventListener('click', () => {
+      const current = this.stateManager.getProject().magnetEnabled !== false;
+      this.stateManager.setMagnetEnabled(!current);
+      this.bus.emit('toast:show', { message: `Magnet Snapping: ${!current ? 'ON' : 'OFF'}`, type: 'info' });
+    });
+
+    // V-Goal toggle
+    this.container.querySelector('#btn-vgoal-toggle')?.addEventListener('click', () => {
+      const current = this.stateManager.getProject().vGoalTime;
+      if (current !== undefined) {
+        this.stateManager.setVGoalTime(undefined);
+        this.bus.emit('toast:show', { message: 'V-Goal Target Removed', type: 'info' });
+      } else {
+        const time = this.stateManager.getPlayheadTime();
+        this.stateManager.setVGoalTime(time);
+        this.bus.emit('toast:show', { message: `V-Goal Target Set to ${time.toFixed(1)}s`, type: 'success' });
+      }
+    });
+
     // Help Dialog Modal
     this.container.querySelector('#btn-help')?.addEventListener('click', () => {
       this.showHelpModal();
@@ -202,9 +228,30 @@ export class Toolbar {
 
     // Listen for state changes to update button states
     this.bus.on('project:changed', () => {
+      const project = this.stateManager.getProject();
       const durationInput = this.container.querySelector('#input-duration') as HTMLInputElement;
       if (durationInput && document.activeElement !== durationInput) {
-        durationInput.value = this.stateManager.getProject().duration.toString();
+        durationInput.value = project.duration.toString();
+      }
+
+      // Update Magnet active state
+      const magnetBtn = this.container.querySelector('#btn-magnet');
+      if (magnetBtn) {
+        if (project.magnetEnabled !== false) {
+          magnetBtn.classList.add('active');
+        } else {
+          magnetBtn.classList.remove('active');
+        }
+      }
+
+      // Update V-Goal active state
+      const vGoalBtn = this.container.querySelector('#btn-vgoal-toggle');
+      if (vGoalBtn) {
+        if (project.vGoalTime !== undefined) {
+          vGoalBtn.classList.add('active');
+        } else {
+          vGoalBtn.classList.remove('active');
+        }
       }
     });
   }

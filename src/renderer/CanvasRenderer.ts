@@ -6,6 +6,7 @@ import { LaneRenderer } from './LaneRenderer';
 import { BlockRenderer } from './BlockRenderer';
 import { EventRenderer } from './EventRenderer';
 import { PlayheadRenderer } from './PlayheadRenderer';
+import { ScoreGraphRenderer } from './ScoreGraphRenderer';
 
 /**
  * Main canvas renderer that composes all sub-renderers.
@@ -20,12 +21,16 @@ export class CanvasRenderer {
   private dirty: boolean = true;
   private animFrameId: number = 0;
 
+  // Transient interaction state
+  public activeMagnetTime: number | null = null;
+
   // Sub-renderers
   private gridRenderer: GridRenderer;
   private laneRenderer: LaneRenderer;
   private blockRenderer: BlockRenderer;
   private eventRenderer: EventRenderer;
   private playheadRenderer: PlayheadRenderer;
+  private scoreGraphRenderer: ScoreGraphRenderer;
 
   constructor(canvas: HTMLCanvasElement, stateManager: StateManager, bus: EventBus) {
     this.canvas = canvas;
@@ -38,6 +43,7 @@ export class CanvasRenderer {
     this.blockRenderer = new BlockRenderer(this.ctx);
     this.eventRenderer = new EventRenderer(this.ctx);
     this.playheadRenderer = new PlayheadRenderer(this.ctx);
+    this.scoreGraphRenderer = new ScoreGraphRenderer(this.ctx);
 
     this.bus.on('render:request', () => this.markDirty());
 
@@ -100,7 +106,7 @@ export class CanvasRenderer {
 
   getContentHeight(): number {
     const lanes = this.stateManager.getSortedLanes();
-    return HEADER_HEIGHT + lanes.length * this.getLaneHeight();
+    return HEADER_HEIGHT + lanes.length * this.getLaneHeight() + 60; // Include graph height margin
   }
 
   resize(): void {
@@ -142,24 +148,26 @@ export class CanvasRenderer {
     const lanes = this.stateManager.getSortedLanes();
     const viewport = state.viewport;
 
+    const graphHeight = 70;
+    const timelineHeight = height - graphHeight;
+
     this.ctx.clearRect(0, 0, width, height);
 
     // Background
     this.ctx.fillStyle = theme.bg;
     this.ctx.fillRect(0, 0, width, height);
 
-    // Save state for clipping the timeline area
     this.ctx.save();
 
     // Draw lanes background (full width including headers)
     this.laneRenderer.renderBackgrounds(
-      lanes, width, height, viewport, theme, this.getLaneHeight()
+      lanes, width, timelineHeight, viewport, theme, this.getLaneHeight()
     );
 
-    // Clip to timeline area (right of lane headers)
+    // Clip to timeline area (right of lane headers, above graph)
     this.ctx.save();
     this.ctx.beginPath();
-    this.ctx.rect(LANE_HEADER_WIDTH, HEADER_HEIGHT, width - LANE_HEADER_WIDTH, height - HEADER_HEIGHT);
+    this.ctx.rect(LANE_HEADER_WIDTH, HEADER_HEIGHT, width - LANE_HEADER_WIDTH, timelineHeight - HEADER_HEIGHT);
     this.ctx.clip();
 
     // Draw grid
@@ -167,7 +175,7 @@ export class CanvasRenderer {
       state.project.duration,
       viewport,
       width,
-      height,
+      timelineHeight,
       theme
     );
 
@@ -187,20 +195,48 @@ export class CanvasRenderer {
     for (const event of state.project.events) {
       const isSelected = state.selection.eventIds.includes(event.id);
       this.eventRenderer.render(
-        event, viewport, HEADER_HEIGHT, height, theme, isSelected
+        event, viewport, HEADER_HEIGHT, timelineHeight, theme, isSelected
       );
     }
 
-    // Draw playhead
+    // Draw V-Goal vertical line if set
+    if (state.project.vGoalTime !== undefined) {
+      const vGoalX = this.timeToX(state.project.vGoalTime);
+      if (vGoalX >= LANE_HEADER_WIDTH && vGoalX <= width) {
+        this.ctx.strokeStyle = '#ffd700'; // Gold
+        this.ctx.lineWidth = 1.5;
+        this.ctx.setLineDash([6, 4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(vGoalX, HEADER_HEIGHT);
+        this.ctx.lineTo(vGoalX, timelineHeight);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+      }
+    }
+
+    // Draw active magnet guide line if snap occurs
+    if (this.activeMagnetTime !== null) {
+      const magnetX = this.timeToX(this.activeMagnetTime);
+      if (magnetX >= LANE_HEADER_WIDTH && magnetX <= width) {
+        this.ctx.strokeStyle = theme.accent;
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(magnetX, HEADER_HEIGHT);
+        this.ctx.lineTo(magnetX, timelineHeight);
+        this.ctx.stroke();
+      }
+    }
+
+    // Draw playhead line
     this.playheadRenderer.render(
-      state.playheadTime, viewport, HEADER_HEIGHT, height, theme
+      state.playheadTime, viewport, HEADER_HEIGHT, timelineHeight, theme
     );
 
     this.ctx.restore(); // Remove timeline clip
 
     // Draw lane headers (on top of everything)
     this.laneRenderer.renderHeaders(
-      lanes, width, height, viewport, theme, this.getLaneHeight()
+      lanes, width, timelineHeight, viewport, theme, this.getLaneHeight()
     );
 
     // Draw timeline header
@@ -208,11 +244,36 @@ export class CanvasRenderer {
       state.project.duration, viewport, width, theme
     );
 
+    // Draw V-Goal crown marker on timeline header
+    if (state.project.vGoalTime !== undefined) {
+      const vGoalX = this.timeToX(state.project.vGoalTime);
+      if (vGoalX >= LANE_HEADER_WIDTH && vGoalX <= width) {
+        this.ctx.fillStyle = '#ffd700'; // Gold
+        this.ctx.font = '14px sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        this.ctx.fillText('👑', vGoalX, HEADER_HEIGHT - 2);
+
+        // Label
+        this.ctx.fillStyle = '#ffd700';
+        this.ctx.font = 'bold 8px Inter, system-ui, sans-serif';
+        this.ctx.fillText('V-GOAL', vGoalX, HEADER_HEIGHT - 16);
+      }
+    }
+
     // Draw playhead indicator in header
     this.playheadRenderer.renderHeaderIndicator(
       state.playheadTime, viewport, theme
     );
 
     this.ctx.restore();
+
+    // Render Sticky Cumulative Score Graph at the bottom
+    this.scoreGraphRenderer.render(
+      state.project,
+      viewport,
+      { x: 0, y: height - graphHeight, width: width, height: graphHeight },
+      theme
+    );
   }
 }

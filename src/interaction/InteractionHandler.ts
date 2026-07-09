@@ -26,6 +26,7 @@ export class InteractionHandler {
 
   private dragState: DragState = { mode: 'none', startX: 0, startY: 0, currentX: 0, currentY: 0 };
   private hoveredBlockId: string | null = null;
+  private activeMagnetTime: number | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -66,8 +67,16 @@ export class InteractionHandler {
   // ---- Hit Testing ----
 
   private hitTest(cx: number, cy: number): HitTestResult {
+    const project = this.stateManager.getProject();
     // Check if in header area
     if (cy < HEADER_HEIGHT) {
+      // Check v-goal hit test
+      if (project.vGoalTime !== undefined) {
+        const vGoalX = this.renderer.timeToX(project.vGoalTime);
+        if (Math.abs(cx - vGoalX) <= 12) {
+          return { type: 'vgoal', time: project.vGoalTime };
+        }
+      }
       return { type: 'timeline-header', time: this.renderer.xToTime(cx) };
     }
 
@@ -82,7 +91,7 @@ export class InteractionHandler {
     }
 
     // Check events first (they span all lanes)
-    const events = this.stateManager.getProject().events;
+    const events = project.events;
     for (const event of events) {
       const ex = this.renderer.timeToX(event.time);
       if (Math.abs(cx - ex) <= EVENT_MARKER_SIZE) {
@@ -132,6 +141,7 @@ export class InteractionHandler {
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
     const hit = this.hitTest(cx, cy);
+    const project = this.stateManager.getProject();
 
     this.dragState = {
       mode: 'none',
@@ -142,10 +152,17 @@ export class InteractionHandler {
     };
 
     switch (hit.type) {
+      case 'vgoal': {
+        if (project.vGoalTime === undefined) break;
+        this.dragState.mode = 'move-vgoal';
+        this.dragState.originVGoalTime = project.vGoalTime;
+        break;
+      }
+
       case 'timeline-header': {
         // Click on header sets playhead
-        const time = clamp(this.renderer.xToTime(cx), 0, this.stateManager.getProject().duration);
-        const snapped = snapTime(time, this.stateManager.getProject().snapInterval);
+        const time = clamp(this.renderer.xToTime(cx), 0, project.duration);
+        const snapped = snapTime(time, project.snapInterval);
         this.stateManager.setPlayheadTime(snapped);
         this.dragState.mode = 'move-playhead';
         break;
@@ -239,6 +256,7 @@ export class InteractionHandler {
     const rect = this.canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
+    const project = this.stateManager.getProject();
 
     // Update cursor based on hover
     if (this.dragState.mode === 'none') {
@@ -254,8 +272,7 @@ export class InteractionHandler {
           this.canvas.style.cursor = 'grab';
           break;
         case 'event':
-          this.canvas.style.cursor = 'pointer';
-          break;
+        case 'vgoal':
         case 'timeline-header':
           this.canvas.style.cursor = 'pointer';
           break;
@@ -276,7 +293,7 @@ export class InteractionHandler {
     this.dragState.currentY = cy;
     const dx = cx - this.dragState.startX;
     const viewport = this.stateManager.getViewport();
-    const snap = this.stateManager.getProject().snapInterval;
+    const snap = project.snapInterval;
 
     switch (this.dragState.mode) {
       case 'move-block': {
@@ -291,11 +308,22 @@ export class InteractionHandler {
         const laneShift = newLaneIdx - origLaneIdx;
 
         this.stateManager.beginBatch();
-        for (const origin of this.dragState.originBlockStates) {
-          let newStart = snapTime(origin.startTime + timeDelta, snap);
-          newStart = Math.max(0, newStart);
+        this.activeMagnetTime = null; // reset guide
+        const blockIds = this.dragState.originBlockStates.map(o => o.blockId);
 
-          const updates: Partial<Block> = { startTime: newStart };
+        for (const origin of this.dragState.originBlockStates) {
+          let targetStart = origin.startTime + timeDelta;
+          
+          // Magnet snapping (high priority)
+          const snapped = this.getMagnetSnappedTime(targetStart, blockIds);
+          if (this.activeMagnetTime !== null) {
+            targetStart = snapped;
+          } else {
+            targetStart = snapTime(targetStart, snap);
+          }
+          targetStart = Math.max(0, targetStart);
+
+          const updates: Partial<Block> = { startTime: targetStart };
 
           // Lane change
           if (laneShift !== 0) {
@@ -317,14 +345,23 @@ export class InteractionHandler {
         const origin = this.dragState.originBlockStates[0];
         const timeDelta = dx / viewport.zoom;
         const endTime = origin.startTime + origin.minDuration + origin.bufferDuration;
-        let newStart = snapTime(origin.startTime + timeDelta, snap);
-        newStart = Math.max(0, newStart);
+        
+        let targetStart = origin.startTime + timeDelta;
+        this.activeMagnetTime = null;
+        const snapped = this.getMagnetSnappedTime(targetStart, [origin.blockId]);
+        if (this.activeMagnetTime !== null) {
+          targetStart = snapped;
+        } else {
+          targetStart = snapTime(targetStart, snap);
+        }
+        targetStart = Math.max(0, targetStart);
+
         // Ensure minimum block width
-        const totalTime = endTime - newStart;
+        const totalTime = endTime - targetStart;
         if (totalTime < 0.1) break;
         const newMin = Math.max(0.1, totalTime - origin.bufferDuration);
         this.stateManager.updateBlock(origin.blockId, {
-          startTime: newStart,
+          startTime: targetStart,
           minDuration: newMin,
         });
         break;
@@ -334,18 +371,28 @@ export class InteractionHandler {
         if (!this.dragState.originBlockStates?.[0]) break;
         const origin = this.dragState.originBlockStates[0];
         const timeDelta = dx / viewport.zoom;
-        const newTotal = origin.minDuration + origin.bufferDuration + timeDelta;
+        
+        let targetEnd = origin.startTime + origin.minDuration + origin.bufferDuration + timeDelta;
+        this.activeMagnetTime = null;
+        const snapped = this.getMagnetSnappedTime(targetEnd, [origin.blockId]);
+        if (this.activeMagnetTime !== null) {
+          targetEnd = snapped;
+        } else {
+          targetEnd = snapTime(targetEnd, snap);
+        }
+
+        const newTotal = targetEnd - origin.startTime;
         if (newTotal < 0.1) break;
-        const snappedTotal = snapTime(newTotal, snap);
+
         // If total < minDuration, reduce minDuration
-        if (snappedTotal <= origin.minDuration) {
+        if (newTotal <= origin.minDuration) {
           this.stateManager.updateBlock(origin.blockId, {
-            minDuration: Math.max(0.1, snappedTotal),
+            minDuration: Math.max(0.1, newTotal),
             bufferDuration: 0,
           });
         } else {
           this.stateManager.updateBlock(origin.blockId, {
-            bufferDuration: snappedTotal - origin.minDuration,
+            bufferDuration: newTotal - origin.minDuration,
           });
         }
         break;
@@ -355,14 +402,41 @@ export class InteractionHandler {
         if (!this.dragState.originEventStates?.[0]) break;
         const origin = this.dragState.originEventStates[0];
         const timeDelta = dx / viewport.zoom;
-        let newTime = snapTime(origin.time + timeDelta, snap);
-        newTime = clamp(newTime, 0, this.stateManager.getProject().duration);
-        this.stateManager.updateEvent(origin.eventId, { time: newTime });
+
+        let targetTime = origin.time + timeDelta;
+        this.activeMagnetTime = null;
+        const snapped = this.getMagnetSnappedTime(targetTime, [origin.eventId]);
+        if (this.activeMagnetTime !== null) {
+          targetTime = snapped;
+        } else {
+          targetTime = snapTime(targetTime, snap);
+        }
+        targetTime = clamp(targetTime, 0, project.duration);
+
+        this.stateManager.updateEvent(origin.eventId, { time: targetTime });
+        break;
+      }
+
+      case 'move-vgoal': {
+        if (this.dragState.originVGoalTime === undefined) break;
+        const timeDelta = dx / viewport.zoom;
+
+        let targetTime = this.dragState.originVGoalTime + timeDelta;
+        this.activeMagnetTime = null;
+        const snapped = this.getMagnetSnappedTime(targetTime);
+        if (this.activeMagnetTime !== null) {
+          targetTime = snapped;
+        } else {
+          targetTime = snapTime(targetTime, snap);
+        }
+        targetTime = clamp(targetTime, 0, project.duration);
+
+        this.stateManager.setVGoalTime(targetTime);
         break;
       }
 
       case 'move-playhead': {
-        const time = clamp(this.renderer.xToTime(cx), 0, this.stateManager.getProject().duration);
+        const time = clamp(this.renderer.xToTime(cx), 0, project.duration);
         const snapped = snapTime(time, snap);
         this.stateManager.setPlayheadTime(snapped);
         break;
@@ -382,9 +456,73 @@ export class InteractionHandler {
       this.selectByRect();
     }
     this.dragState = { mode: 'none', startX: 0, startY: 0, currentX: 0, currentY: 0 };
+    this.activeMagnetTime = null;
+    this.renderer.activeMagnetTime = null; // Sync to renderer
     this.canvas.style.cursor = 'default';
     this.bus.emit('render:request', undefined as any);
   };
+
+  // ---- Magnet Snapping Calculation ----
+
+  private getMagnetSnappedTime(targetTime: number, excludeBlockIds: string[] = []): number {
+    const project = this.stateManager.getProject();
+    if (project.magnetEnabled === false) return targetTime;
+
+    const viewport = this.stateManager.getViewport();
+    const thresholdPixels = 10;
+    const thresholdSeconds = thresholdPixels / viewport.zoom;
+
+    // Collect all snap candidate times
+    const candidates: number[] = [];
+
+    // All events
+    for (const event of project.events) {
+      candidates.push(event.time);
+    }
+
+    // Playhead
+    candidates.push(this.stateManager.getPlayheadTime());
+
+    // V-Goal
+    if (project.vGoalTime !== undefined) {
+      candidates.push(project.vGoalTime);
+    }
+
+    // All blocks
+    for (const lane of project.lanes) {
+      for (const block of lane.blocks) {
+        if (excludeBlockIds.includes(block.id)) continue;
+        candidates.push(block.startTime);
+        candidates.push(block.startTime + block.minDuration + block.bufferDuration);
+      }
+    }
+
+    // Find the closest candidate within the threshold
+    let closestTime = targetTime;
+    let minDiff = thresholdSeconds;
+
+    for (const cand of candidates) {
+      const diff = Math.abs(cand - targetTime);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestTime = cand;
+      }
+    }
+
+    if (minDiff < thresholdSeconds) {
+      this.activeMagnetTime = closestTime;
+      this.renderer.activeMagnetTime = closestTime; // Sync to renderer
+      return closestTime;
+    }
+
+    this.activeMagnetTime = null;
+    this.renderer.activeMagnetTime = null; // Sync to renderer
+    return targetTime;
+  }
+
+  getActiveMagnetTime(): number | null {
+    return this.activeMagnetTime;
+  }
 
   // ---- Selection Rectangle ----
 

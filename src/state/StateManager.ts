@@ -41,6 +41,8 @@ function createDefaultProject(): Project {
     ],
     events: [],
     snapInterval: 0.5,
+    vGoalTime: 60,
+    magnetEnabled: true,
   };
 }
 
@@ -405,6 +407,24 @@ export class StateManager {
 
   setDuration(duration: number): void {
     this.state.project.duration = Math.max(1, duration);
+    this.recordChange();
+    this.bus.emit('project:changed', this.state.project);
+    this.bus.emit('render:request', undefined as any);
+  }
+
+  // -- Magnet --
+
+  setMagnetEnabled(enabled: boolean): void {
+    this.state.project.magnetEnabled = enabled;
+    this.recordChange();
+    this.bus.emit('project:changed', this.state.project);
+    this.bus.emit('render:request', undefined as any);
+  }
+
+  // -- V-Goal --
+
+  setVGoalTime(time: number | undefined): void {
+    this.state.project.vGoalTime = time !== undefined ? Math.max(0, Math.min(time, this.state.project.duration)) : undefined;
     this.recordChange();
     this.bus.emit('project:changed', this.state.project);
     this.bus.emit('render:request', undefined as any);

@@ -10,6 +10,8 @@ export interface Project {
   lanes: Lane[];
   events: TimelineEvent[];
   snapInterval: SnapInterval;
+  vGoalTime?: number;       // target V-Goal time in seconds (optional)
+  magnetEnabled?: boolean;   // whether magnet snapping is enabled (optional)
 }
 
 export interface Lane {
@@ -31,6 +33,7 @@ export interface Block {
   minDuration: number;     // required time (solid part)
   bufferDuration: number;  // buffer time (striped part)
   memo: string;
+  scoreEffect?: number;    // optional score points for this block (e.g. +10)
 }
 
 export interface TimelineEvent {
@@ -39,6 +42,7 @@ export interface TimelineEvent {
   label: string;
   color: string;
   icon: string; // e.g. "★", "▶", "●"
+  scoreEffect?: number;    // optional score points for this event (e.g. +20)
 }
 
 // ============================================================
@@ -66,7 +70,8 @@ export type DragMode =
   | 'move-event'
   | 'pan'
   | 'select-rect'
-  | 'move-playhead';
+  | 'move-playhead'
+  | 'move-vgoal';
 
 export interface DragState {
   mode: DragMode;
@@ -77,6 +82,7 @@ export interface DragState {
   originBlockStates?: BlockDragOrigin[];
   originEventStates?: EventDragOrigin[];
   targetLaneId?: string;
+  originVGoalTime?: number;
 }
 
 export interface BlockDragOrigin {
@@ -93,7 +99,7 @@ export interface EventDragOrigin {
 }
 
 export interface HitTestResult {
-  type: 'block' | 'block-left-edge' | 'block-right-edge' | 'event' | 'lane-header' | 'timeline-header' | 'empty';
+  type: 'block' | 'block-left-edge' | 'block-right-edge' | 'event' | 'lane-header' | 'timeline-header' | 'empty' | 'vgoal';
   blockId?: string;
   eventId?: string;
   laneId?: string;

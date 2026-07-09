@@ -10,6 +10,7 @@ import { SearchPanel } from './ui/SearchPanel';
 import { ContextMenu } from './ui/ContextMenu';
 import { Modal } from './ui/Modal';
 import { ToastManager } from './ui/Toast';
+import { StatsPanel } from './ui/StatsPanel';
 
 export class TimelineApp {
   private container: HTMLElement;
@@ -23,6 +24,7 @@ export class TimelineApp {
   private toolbar!: Toolbar;
   private propertyPanel!: PropertyPanel;
   private laneManager!: LaneManager;
+  private statsPanel!: StatsPanel;
   private searchPanel!: SearchPanel;
   private contextMenu!: ContextMenu;
   private modal!: Modal;
@@ -47,6 +49,7 @@ export class TimelineApp {
       <div class="main-container">
         <div class="sidebar-left">
           <div id="lane-manager-container"></div>
+          <div id="stats-panel-container"></div>
         </div>
         <div class="editor-area">
           <canvas id="timeline-canvas"></canvas>
@@ -85,6 +88,9 @@ export class TimelineApp {
 
     const laneCont = this.container.querySelector('#lane-manager-container') as HTMLElement;
     this.laneManager = new LaneManager(laneCont, this.stateManager, this.bus);
+
+    const statsCont = this.container.querySelector('#stats-panel-container') as HTMLElement;
+    this.statsPanel = new StatsPanel(statsCont, this.stateManager, this.bus);
 
     const searchCont = this.container.querySelector('#search-overlay') as HTMLElement;
     this.searchPanel = new SearchPanel(searchCont, this.stateManager, this.bus);
