@@ -1,9 +1,9 @@
 import { Viewport } from '../types';
-import { ThemeColors, HEADER_HEIGHT, LANE_HEADER_WIDTH } from '../constants';
+import { HEADER_HEIGHT, LANE_HEADER_WIDTH, ThemeColors } from '../constants';
 import { getGridIntervals, formatTime } from '../utils/time';
 
 /**
- * Renders the time grid lines and header labels.
+ * Renders the time grid and timeline header.
  */
 export class GridRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -30,6 +30,11 @@ export class GridRenderer {
     this.ctx.strokeStyle = theme.gridLineMajor;
     this.ctx.lineWidth = 1;
     this.drawGridLines(major, duration, viewport, width, height);
+
+    // 30s milestone grid lines (User request: "30sごとにライン入れて")
+    this.ctx.strokeStyle = theme.border;
+    this.ctx.lineWidth = 1.5;
+    this.drawGridLines(30, duration, viewport, width, height);
   }
 
   renderHeader(
@@ -50,12 +55,12 @@ export class GridRenderer {
     this.ctx.lineTo(width, HEADER_HEIGHT);
     this.ctx.stroke();
 
-    // Time labels
+    // Time labels and ticks
     const [, major] = getGridIntervals(viewport.zoom);
     this.ctx.fillStyle = theme.text;
-    this.ctx.font = '11px Inter, system-ui, sans-serif';
+    this.ctx.font = '10px Inter, system-ui, sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'bottom';
+    this.ctx.textBaseline = 'top';
 
     const startTime = Math.max(0, Math.floor((-LANE_HEADER_WIDTH + viewport.scrollX) / viewport.zoom / major) * major);
     const endTime = Math.min(duration, (width + viewport.scrollX) / viewport.zoom);
@@ -63,14 +68,30 @@ export class GridRenderer {
     for (let t = startTime; t <= endTime; t += major) {
       const x = t * viewport.zoom - viewport.scrollX + LANE_HEADER_WIDTH;
       if (x < LANE_HEADER_WIDTH - 10 || x > width + 10) continue;
-      this.ctx.fillText(formatTime(t), x, HEADER_HEIGHT - 6);
 
-      // Tick mark
+      // Draw time labels high up (Y = 8px)
+      this.ctx.fillText(formatTime(t), x, 8);
+
+      // Draw tick marks in the upper half of header (0 to 18px)
       this.ctx.strokeStyle = theme.gridLineMajor;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
-      this.ctx.moveTo(x, HEADER_HEIGHT - 4);
-      this.ctx.lineTo(x, HEADER_HEIGHT);
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, 18);
+      this.ctx.stroke();
+    }
+
+    // Draw extra tick marks and labels for 30s milestones if they aren't already drawn
+    for (let t = 0; t <= duration; t += 30) {
+      const x = t * viewport.zoom - viewport.scrollX + LANE_HEADER_WIDTH;
+      if (x < LANE_HEADER_WIDTH - 10 || x > width + 10) continue;
+
+      // Bold tick marks for 30s
+      this.ctx.strokeStyle = theme.accent;
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, 22);
       this.ctx.stroke();
     }
 

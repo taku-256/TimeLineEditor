@@ -3,7 +3,7 @@
 // ============================================================
 
 // Layout
-export const HEADER_HEIGHT = 40;         // timeline header height
+export const HEADER_HEIGHT = 60;         // timeline header height
 export const LANE_HEADER_WIDTH = 160;    // left lane label width
 export const LANE_HEIGHT = 56;           // height of each lane
 export const LANE_PADDING = 6;           // padding inside lane
@@ -21,7 +21,7 @@ export const MAX_ZOOM = 200;
 export const ZOOM_FACTOR = 1.15;
 
 // Timeline
-export const DEFAULT_DURATION = 120;     // seconds
+export const DEFAULT_DURATION = 180;     // seconds (3 minutes default)
 export const TIME_PRECISION = 0.1;       // 0.1 second precision
 export const DEFAULT_SNAP_INTERVAL = 0.5;
 

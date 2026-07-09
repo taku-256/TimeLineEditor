@@ -1,5 +1,6 @@
 import { Viewport } from '../types';
-import { ThemeColors, HEADER_HEIGHT, LANE_HEADER_WIDTH, PLAYHEAD_WIDTH } from '../constants';
+import { ThemeColors, HEADER_HEIGHT, LANE_HEADER_WIDTH } from '../constants';
+import { hexToRgba } from '../utils/color';
 
 /**
  * Renders the playhead (current time indicator).
@@ -21,13 +22,15 @@ export class PlayheadRenderer {
     const x = time * viewport.zoom - viewport.scrollX + LANE_HEADER_WIDTH;
     if (x < LANE_HEADER_WIDTH || x > this.ctx.canvas.width) return;
 
-    // Playhead line
-    this.ctx.strokeStyle = theme.playhead;
-    this.ctx.lineWidth = PLAYHEAD_WIDTH;
+    // Playhead line (subtle dashed vertical line)
+    this.ctx.strokeStyle = hexToRgba(theme.playhead, 0.4);
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 4]);
     this.ctx.beginPath();
     this.ctx.moveTo(x, headerHeight);
     this.ctx.lineTo(x, canvasHeight);
     this.ctx.stroke();
+    this.ctx.setLineDash([]);
   }
 
   renderHeaderIndicator(

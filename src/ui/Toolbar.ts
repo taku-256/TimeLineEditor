@@ -144,8 +144,22 @@ export class Toolbar {
         this.bus.emit('toast:show', { message: 'Please add a lane first', type: 'warning' });
         return;
       }
-      const block = this.stateManager.addBlock(lanes[0].id, {
-        startTime: this.stateManager.getPlayheadTime(),
+
+      const selection = this.stateManager.getSelection();
+      let targetLaneId = lanes[0].id;
+      let targetStartTime = this.stateManager.getPlayheadTime();
+
+      if (selection.blockIds.length > 0) {
+        const lastBlockId = selection.blockIds[selection.blockIds.length - 1];
+        const found = this.stateManager.findBlock(lastBlockId);
+        if (found) {
+          targetLaneId = found.lane.id;
+          targetStartTime = found.block.startTime + found.block.minDuration + found.block.bufferDuration;
+        }
+      }
+
+      const block = this.stateManager.addBlock(targetLaneId, {
+        startTime: targetStartTime,
       });
       this.stateManager.setSelection({ blockIds: [block.id], eventIds: [] });
     });
