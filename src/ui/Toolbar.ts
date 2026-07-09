@@ -89,6 +89,12 @@ export class Toolbar {
           <span class="toolbar-unit">s</span>
         </div>
 
+        <div class="toolbar-group">
+          <label class="toolbar-label">Max Score</label>
+          <input class="toolbar-input" type="number" id="input-max-score" value="${project.maxScore ?? ''}" placeholder="Auto" min="10" max="9999" step="10" style="width: 70px;" title="Maximum score on the graph Y-axis (leave empty for auto scaling)" />
+          <span class="toolbar-unit">pts</span>
+        </div>
+
         <div class="toolbar-spacer"></div>
 
         <div class="toolbar-group">
@@ -172,6 +178,13 @@ export class Toolbar {
       }
     });
 
+    // Max Score
+    this.container.querySelector('#input-max-score')?.addEventListener('change', (e) => {
+      const rawVal = (e.target as HTMLInputElement).value.trim();
+      const val = rawVal === '' ? undefined : parseInt(rawVal, 10);
+      this.stateManager.setMaxScore(val);
+    });
+
     // Search
     this.container.querySelector('#btn-search')?.addEventListener('click', () => {
       this.bus.emit('search:open', undefined as any);
@@ -232,6 +245,11 @@ export class Toolbar {
       const durationInput = this.container.querySelector('#input-duration') as HTMLInputElement;
       if (durationInput && document.activeElement !== durationInput) {
         durationInput.value = project.duration.toString();
+      }
+
+      const maxScoreInput = this.container.querySelector('#input-max-score') as HTMLInputElement;
+      if (maxScoreInput && document.activeElement !== maxScoreInput) {
+        maxScoreInput.value = project.maxScore !== undefined ? project.maxScore.toString() : '';
       }
 
       // Update Magnet active state

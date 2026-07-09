@@ -427,6 +427,15 @@ export class StateManager {
     this.bus.emit('render:request', undefined as any);
   }
 
+  // -- Max Score Limit --
+
+  setMaxScore(max: number | undefined): void {
+    this.state.project.maxScore = max !== undefined && max > 0 ? max : undefined;
+    this.recordChange();
+    this.bus.emit('project:changed', this.state.project);
+    this.bus.emit('render:request', undefined as any);
+  }
+
   // ---- Undo / Redo ----
 
   undo(): boolean {

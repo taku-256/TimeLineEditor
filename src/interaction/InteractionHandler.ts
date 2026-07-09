@@ -576,24 +576,26 @@ export class InteractionHandler {
     const rect = this.canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
 
-    if (e.shiftKey) {
-      // Horizontal scroll
-      const vp = this.stateManager.getViewport();
-      const newScrollX = Math.max(0, vp.scrollX + e.deltaY);
-      this.stateManager.setViewport({ scrollX: newScrollX });
-    } else if (e.ctrlKey || e.metaKey) {
-      // Vertical scroll
-      const vp = this.stateManager.getViewport();
-      const newScrollY = Math.max(0, vp.scrollY + e.deltaY);
-      this.stateManager.setViewport({ scrollY: newScrollY });
-    } else {
-      // Zoom centered on cursor
+    const isZoomKey = e.ctrlKey || e.metaKey || e.altKey;
+
+    if (isZoomKey) {
+      // Zoom centered on cursor (with Ctrl, Cmd, or Alt)
       const vp = this.stateManager.getViewport();
       const timeAtCursor = this.renderer.xToTime(cx);
       const factor = e.deltaY > 0 ? 1 / ZOOM_FACTOR : ZOOM_FACTOR;
       const newZoom = clamp(vp.zoom * factor, vp.minZoom, vp.maxZoom);
       const newScrollX = Math.max(0, timeAtCursor * newZoom - (cx - LANE_HEADER_WIDTH));
       this.stateManager.setViewport({ zoom: newZoom, scrollX: newScrollX });
+    } else if (e.shiftKey) {
+      // Vertical scroll (with Shift)
+      const vp = this.stateManager.getViewport();
+      const newScrollY = Math.max(0, vp.scrollY + e.deltaY);
+      this.stateManager.setViewport({ scrollY: newScrollY });
+    } else {
+      // Horizontal scroll (plain wheel for effortless scrolling!)
+      const vp = this.stateManager.getViewport();
+      const newScrollX = Math.max(0, vp.scrollX + e.deltaY);
+      this.stateManager.setViewport({ scrollX: newScrollX });
     }
   };
 

@@ -52,7 +52,12 @@ export class TimelineApp {
           <div id="stats-panel-container"></div>
         </div>
         <div class="editor-area">
-          <canvas id="timeline-canvas"></canvas>
+          <div class="canvas-wrapper">
+            <canvas id="timeline-canvas"></canvas>
+            <div id="timeline-scrollbar-container" class="timeline-scrollbar-container">
+              <div id="timeline-scrollbar-content" class="timeline-scrollbar-content"></div>
+            </div>
+          </div>
         </div>
         <div class="sidebar-right">
           <div id="property-panel-container"></div>
@@ -104,9 +109,44 @@ export class TimelineApp {
     const toastCont = this.container.querySelector('#toast-overlay') as HTMLElement;
     this.toastManager = new ToastManager(toastCont, this.bus);
 
+    this.initScrollbar();
+
     // Initial theme setup
     this.updateTheme(this.stateManager.getTheme());
     this.bus.on('theme:changed', (theme) => this.updateTheme(theme));
+  }
+
+  private initScrollbar(): void {
+    const scrollbarContainer = this.container.querySelector('#timeline-scrollbar-container') as HTMLElement;
+    const scrollbarContent = this.container.querySelector('#timeline-scrollbar-content') as HTMLElement;
+    if (!scrollbarContainer || !scrollbarContent) return;
+
+    // Handle scroll on HTML scrollbar -> sync to state
+    scrollbarContainer.addEventListener('scroll', () => {
+      const currentScrollX = this.stateManager.getViewport().scrollX;
+      if (Math.abs(scrollbarContainer.scrollLeft - currentScrollX) > 1) {
+        this.stateManager.setViewport({ scrollX: scrollbarContainer.scrollLeft });
+      }
+    });
+
+    // Handle viewport changes -> sync to HTML scrollbar
+    const updateScrollbar = () => {
+      const vp = this.stateManager.getViewport();
+      const proj = this.stateManager.getProject();
+      
+      const virtualWidth = proj.duration * vp.zoom;
+      scrollbarContent.style.width = `${virtualWidth}px`;
+      
+      if (Math.abs(scrollbarContainer.scrollLeft - vp.scrollX) > 1) {
+        scrollbarContainer.scrollLeft = vp.scrollX;
+      }
+    };
+
+    this.bus.on('viewport:changed', updateScrollbar);
+    this.bus.on('project:changed', updateScrollbar);
+    
+    // Initial call
+    updateScrollbar();
   }
 
   private updateTheme(theme: 'dark' | 'light'): void {

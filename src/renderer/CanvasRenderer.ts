@@ -191,10 +191,10 @@ export class CanvasRenderer {
       }
     }
 
-    // Draw events
+    // Draw event vertical lines (inside clip, so they don't bleed into header)
     for (const event of state.project.events) {
       const isSelected = state.selection.eventIds.includes(event.id);
-      this.eventRenderer.render(
+      this.eventRenderer.renderLine(
         event, viewport, HEADER_HEIGHT, timelineHeight, theme, isSelected
       );
     }
@@ -265,6 +265,14 @@ export class CanvasRenderer {
     this.playheadRenderer.renderHeaderIndicator(
       state.playheadTime, viewport, theme
     );
+
+    // Draw event markers (Pass 2, drawn on top of the header, outside clip area)
+    for (const event of state.project.events) {
+      const isSelected = state.selection.eventIds.includes(event.id);
+      this.eventRenderer.renderMarker(
+        event, viewport, HEADER_HEIGHT, theme, isSelected
+      );
+    }
 
     this.ctx.restore();
 
