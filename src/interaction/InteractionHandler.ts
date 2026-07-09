@@ -68,6 +68,16 @@ export class InteractionHandler {
 
   private hitTest(cx: number, cy: number): HitTestResult {
     const project = this.stateManager.getProject();
+    const viewport = this.stateManager.getViewport();
+
+    // Check if near top edge of the score graph (resizable area)
+    const canvasHeight = this.canvas.height / (window.devicePixelRatio || 1);
+    const graphHeight = viewport.scoreGraphHeight ?? 70;
+    const graphTopY = canvasHeight - graphHeight;
+    if (Math.abs(cy - graphTopY) <= 6) {
+      return { type: 'graph-resize-edge' };
+    }
+
     // Check if in header area
     if (cy < HEADER_HEIGHT) {
       // Check v-goal hit test
@@ -152,6 +162,13 @@ export class InteractionHandler {
     };
 
     switch (hit.type) {
+      case 'graph-resize-edge': {
+        const vp = this.stateManager.getViewport();
+        this.dragState.mode = 'resize-graph';
+        this.dragState.originScoreGraphHeight = vp.scoreGraphHeight ?? 70;
+        break;
+      }
+
       case 'vgoal': {
         if (project.vGoalTime === undefined) break;
         this.dragState.mode = 'move-vgoal';
@@ -262,6 +279,9 @@ export class InteractionHandler {
     if (this.dragState.mode === 'none') {
       const hit = this.hitTest(cx, cy);
       switch (hit.type) {
+        case 'graph-resize-edge':
+          this.canvas.style.cursor = 'ns-resize';
+          break;
         case 'block-left-edge':
           this.canvas.style.cursor = 'ew-resize';
           break;
@@ -446,6 +466,15 @@ export class InteractionHandler {
         // Draw selection rectangle and select blocks inside
         this.selectByRect();
         this.bus.emit('render:request', undefined as any);
+        break;
+      }
+
+      case 'resize-graph': {
+        this.canvas.style.cursor = 'ns-resize';
+        if (this.dragState.originScoreGraphHeight === undefined) break;
+        const dy = cy - this.dragState.startY;
+        const newHeight = clamp(this.dragState.originScoreGraphHeight - dy, 40, 450);
+        this.stateManager.setViewport({ scoreGraphHeight: newHeight });
         break;
       }
     }

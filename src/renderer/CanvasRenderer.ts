@@ -148,7 +148,7 @@ export class CanvasRenderer {
     const lanes = this.stateManager.getSortedLanes();
     const viewport = state.viewport;
 
-    const graphHeight = 70;
+    const graphHeight = viewport.scoreGraphHeight ?? 70;
     const timelineHeight = height - graphHeight;
 
     this.ctx.clearRect(0, 0, width, height);

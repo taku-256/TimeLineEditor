@@ -56,6 +56,7 @@ export interface Viewport {
   zoom: number;         // pixels per second
   minZoom: number;
   maxZoom: number;
+  scoreGraphHeight?: number; // custom height of score graph at bottom
 }
 
 export interface Selection {
@@ -72,7 +73,8 @@ export type DragMode =
   | 'pan'
   | 'select-rect'
   | 'move-playhead'
-  | 'move-vgoal';
+  | 'move-vgoal'
+  | 'resize-graph';
 
 export interface DragState {
   mode: DragMode;
@@ -84,6 +86,7 @@ export interface DragState {
   originEventStates?: EventDragOrigin[];
   targetLaneId?: string;
   originVGoalTime?: number;
+  originScoreGraphHeight?: number;
 }
 
 export interface BlockDragOrigin {
@@ -100,7 +103,16 @@ export interface EventDragOrigin {
 }
 
 export interface HitTestResult {
-  type: 'block' | 'block-left-edge' | 'block-right-edge' | 'event' | 'lane-header' | 'timeline-header' | 'empty' | 'vgoal';
+  type:
+    | 'block'
+    | 'block-left-edge'
+    | 'block-right-edge'
+    | 'event'
+    | 'lane-header'
+    | 'timeline-header'
+    | 'empty'
+    | 'vgoal'
+    | 'graph-resize-edge';
   blockId?: string;
   eventId?: string;
   laneId?: string;

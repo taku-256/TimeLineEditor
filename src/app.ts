@@ -137,6 +137,9 @@ export class TimelineApp {
       const virtualWidth = proj.duration * vp.zoom;
       scrollbarContent.style.width = `${virtualWidth}px`;
       
+      const graphHeight = vp.scoreGraphHeight ?? 70;
+      scrollbarContainer.style.bottom = `${graphHeight}px`;
+      
       if (Math.abs(scrollbarContainer.scrollLeft - vp.scrollX) > 1) {
         scrollbarContainer.scrollLeft = vp.scrollX;
       }

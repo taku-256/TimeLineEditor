@@ -35,12 +35,6 @@ export class ClipboardManager {
       }
     }
 
-    if (this.clipboardBlocks.length > 0 || this.clipboardEvents.length > 0) {
-      this.bus.emit('toast:show', {
-        message: `Copied ${this.clipboardBlocks.length} blocks, ${this.clipboardEvents.length} events`,
-        type: 'info',
-      });
-    }
   }
 
   paste(): void {
@@ -83,11 +77,6 @@ export class ClipboardManager {
     this.stateManager.setSelection({
       blockIds: newBlockIds,
       eventIds: newEventIds,
-    });
-
-    this.bus.emit('toast:show', {
-      message: `Pasted ${newBlockIds.length} blocks, ${newEventIds.length} events`,
-      type: 'success',
     });
   }
 
