@@ -46,30 +46,33 @@ export class ClipboardManager {
   paste(): void {
     if (this.clipboardBlocks.length === 0 && this.clipboardEvents.length === 0) return;
 
-    const offset = 1; // paste offset in seconds
     this.stateManager.beginBatch();
 
     const newBlockIds: string[] = [];
     const newEventIds: string[] = [];
 
     for (const block of this.clipboardBlocks) {
+      // Place the pasted block immediately after the original block's end
+      const endTime = block.startTime + block.minDuration + block.bufferDuration;
       const newBlock = this.stateManager.addBlock(block.laneId, {
         name: block.name,
         color: block.color,
-        startTime: block.startTime + offset,
+        startTime: endTime,
         minDuration: block.minDuration,
         bufferDuration: block.bufferDuration,
         memo: block.memo,
+        scoreEffect: block.scoreEffect,
       });
       newBlockIds.push(newBlock.id);
     }
 
     for (const ev of this.clipboardEvents) {
       const newEvent = this.stateManager.addEvent({
-        time: ev.time + offset,
+        time: ev.time + 1,
         label: ev.label,
         color: ev.color,
         icon: ev.icon,
+        scoreEffect: ev.scoreEffect,
       });
       newEventIds.push(newEvent.id);
     }

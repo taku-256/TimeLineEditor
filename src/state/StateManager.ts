@@ -41,7 +41,7 @@ function createDefaultProject(): Project {
     ],
     events: [],
     snapInterval: 0.5,
-    vGoalTime: 60,
+    vGoalTime: undefined,
     magnetEnabled: true,
   };
 }
