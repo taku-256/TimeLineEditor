@@ -4,6 +4,7 @@ import { hexToRgba } from '../utils/color';
 
 /**
  * Renders timeline events as vertical lines with diamond markers and labels.
+ * Supports two-pass rendering: lines (inside clip) and markers (outside clip, in header).
  */
 export class EventRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -12,39 +13,48 @@ export class EventRenderer {
     this.ctx = ctx;
   }
 
-  render(
+  /**
+   * Pass 1: Draw the vertical dashed line only (call inside timeline clip region).
+   */
+  renderLine(
     event: TimelineEvent,
     viewport: Viewport,
     headerHeight: number,
     canvasHeight: number,
+    _theme: ThemeColors,
+    isSelected: boolean
+  ): void {
+    const x = event.time * viewport.zoom - viewport.scrollX + LANE_HEADER_WIDTH;
+    if (x < LANE_HEADER_WIDTH - 20 || x > this.ctx.canvas.width + 20) return;
+
+    this.ctx.strokeStyle = isSelected
+      ? event.color
+      : hexToRgba(event.color, 0.35);
+    this.ctx.lineWidth = isSelected ? 2 : 1;
+    this.ctx.setLineDash([3, 6]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, headerHeight);
+    this.ctx.lineTo(x, canvasHeight);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+  }
+
+  /**
+   * Pass 2: Draw the diamond marker, icon, and label (call OUTSIDE clip, in header area).
+   */
+  renderMarker(
+    event: TimelineEvent,
+    viewport: Viewport,
+    headerHeight: number,
     theme: ThemeColors,
     isSelected: boolean
   ): void {
     const x = event.time * viewport.zoom - viewport.scrollX + LANE_HEADER_WIDTH;
-
-    // Skip if not visible
     if (x < LANE_HEADER_WIDTH - 20 || x > this.ctx.canvas.width + 20) return;
 
-    const lineTop = headerHeight;
-    const lineBottom = canvasHeight;
-
-    // Vertical line
-    this.ctx.strokeStyle = isSelected
-      ? event.color
-      : hexToRgba(event.color, 0.6);
-    this.ctx.lineWidth = isSelected ? 2 : 1;
-    this.ctx.setLineDash([4, 4]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(x, lineTop);
-    this.ctx.lineTo(x, lineBottom);
-    this.ctx.stroke();
-    this.ctx.setLineDash([]);
-
-    // Diamond marker at top
-    const markerY = headerHeight + 16;
+    const markerY = headerHeight - 14;
     const s = EVENT_MARKER_SIZE / 2;
 
-    // Glow for selected
     if (isSelected) {
       this.ctx.shadowColor = event.color;
       this.ctx.shadowBlur = 10;
@@ -68,20 +78,33 @@ export class EventRenderer {
     this.ctx.shadowColor = 'transparent';
     this.ctx.shadowBlur = 0;
 
-    // Icon
     if (event.icon) {
       this.ctx.fillStyle = event.color;
-      this.ctx.font = '12px sans-serif';
-      this.ctx.textAlign = 'center';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'middle';
-      this.ctx.fillText(event.icon, x, markerY + s + 14);
+      this.ctx.fillText(event.icon, x + s + 3, markerY);
     }
 
-    // Label
     this.ctx.fillStyle = isSelected ? theme.text : theme.textSecondary;
-    this.ctx.font = '10px Inter, system-ui, sans-serif';
+    this.ctx.font = '9px Inter, system-ui, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'top';
-    this.ctx.fillText(event.label, x, markerY + s + 26);
+    this.ctx.fillText(event.label, x, markerY + s + 2, 50);
+  }
+
+  /**
+   * Legacy single-pass render (kept for compatibility).
+   */
+  render(
+    event: TimelineEvent,
+    viewport: Viewport,
+    headerHeight: number,
+    canvasHeight: number,
+    theme: ThemeColors,
+    isSelected: boolean
+  ): void {
+    this.renderLine(event, viewport, headerHeight, canvasHeight, theme, isSelected);
+    this.renderMarker(event, viewport, headerHeight, theme, isSelected);
   }
 }

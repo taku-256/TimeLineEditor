@@ -12,6 +12,7 @@ export interface Project {
   snapInterval: SnapInterval;
   vGoalTime?: number;       // target V-Goal time in seconds (optional)
   magnetEnabled?: boolean;   // whether magnet snapping is enabled (optional)
+  maxScore?: number;         // max score for graph Y-axis scaling (optional, auto if unset)
 }
 
 export interface Lane {

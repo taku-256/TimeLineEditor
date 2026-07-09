@@ -34,15 +34,12 @@ function createDefaultProject(): Project {
     duration: DEFAULT_DURATION,
     lanes: [
       { id: generateId(), name: 'Robot1', color: LANE_COLORS[0], blocks: [], order: 0, visible: true, locked: false },
-      { id: generateId(), name: 'Robot2', color: LANE_COLORS[1], blocks: [], order: 1, visible: true, locked: false },
-      { id: generateId(), name: 'Operator', color: LANE_COLORS[2], blocks: [], order: 2, visible: true, locked: false },
-      { id: generateId(), name: 'Auto', color: LANE_COLORS[3], blocks: [], order: 3, visible: true, locked: false },
-      { id: generateId(), name: 'Score', color: LANE_COLORS[4], blocks: [], order: 4, visible: true, locked: false },
     ],
     events: [],
     snapInterval: 0.5,
     vGoalTime: undefined,
     magnetEnabled: true,
+    maxScore: undefined,
   };
 }
 

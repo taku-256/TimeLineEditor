@@ -91,8 +91,8 @@ export class ScoreGraphRenderer {
     // 3. Draw the graph itself
     if (cumulativePoints.length < 2) return;
 
-    // Find max score for scaling
-    const maxScore = Math.max(20, ...cumulativePoints.map(p => p.score));
+    // Find max score for scaling (use project.maxScore if configured)
+    const maxScore = project.maxScore ?? Math.max(20, ...cumulativePoints.map(p => p.score));
     const padding = 10;
     const graphH = rect.height - padding * 2;
     const graphY = rect.y + padding;
