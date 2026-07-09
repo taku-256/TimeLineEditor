@@ -227,10 +227,10 @@ export class CanvasRenderer {
       }
     }
 
-    // Draw playhead line
-    this.playheadRenderer.render(
-      state.playheadTime, viewport, HEADER_HEIGHT, timelineHeight, theme
-    );
+    // Draw playhead line (Disabled per user request)
+    // this.playheadRenderer.render(
+    //   state.playheadTime, viewport, HEADER_HEIGHT, timelineHeight, theme
+    // );
 
     this.ctx.restore(); // Remove timeline clip
 
@@ -261,10 +261,10 @@ export class CanvasRenderer {
       }
     }
 
-    // Draw playhead indicator in header
-    this.playheadRenderer.renderHeaderIndicator(
-      state.playheadTime, viewport, theme
-    );
+    // Draw playhead indicator in header (Disabled per user request)
+    // this.playheadRenderer.renderHeaderIndicator(
+    //   state.playheadTime, viewport, theme
+    // );
 
     // Draw event markers (Pass 2, drawn on top of the header, outside clip area)
     for (const event of state.project.events) {

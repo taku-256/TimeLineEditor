@@ -208,12 +208,6 @@ export class PropertyPanel {
           <input class="prop-input" type="number" id="prop-event-time" value="${event.time}" min="0" step="0.1" />
         </div>
 
-        <div class="prop-group">
-          <label class="prop-label">Icon</label>
-          <div class="icon-picker">
-            ${EVENT_ICONS.map(ic => `<button class="icon-btn ${ic === event.icon ? 'active' : ''}" data-icon="${ic}">${ic}</button>`).join('')}
-          </div>
-        </div>
 
         <div class="prop-group">
           <label class="prop-label">Color</label>
@@ -251,13 +245,6 @@ export class PropertyPanel {
       if (!isNaN(val)) this.stateManager.updateEvent(eventId, { time: Math.max(0, val) });
     });
 
-    this.container.querySelectorAll('.icon-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const icon = (btn as HTMLElement).dataset.icon!;
-        this.stateManager.updateEvent(eventId, { icon });
-        this.update();
-      });
-    });
 
     this.container.querySelectorAll('.color-swatch').forEach(btn => {
       btn.addEventListener('click', () => {

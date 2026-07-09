@@ -636,6 +636,11 @@ export class InteractionHandler {
     const cy = e.clientY - rect.top;
     const hit = this.hitTest(cx, cy);
 
+    if (hit.type === 'block' && hit.blockId) {
+      this.startInlineEdit(hit.blockId);
+      return;
+    }
+
     if (hit.type === 'empty' && hit.laneId) {
       // Add new block at click position
       const time = snapTime(
@@ -779,6 +784,79 @@ export class InteractionHandler {
   };
 
   // ---- Helpers ----
+
+  private startInlineEdit(blockId: string): void {
+    const found = this.stateManager.findBlock(blockId);
+    if (!found) return;
+
+    const vp = this.stateManager.getViewport();
+    const lanes = this.stateManager.getSortedLanes();
+    const laneIdx = lanes.findIndex(l => l.id === found.lane.id);
+    if (laneIdx === -1) return;
+
+    const laneY = this.renderer.laneIndexToY(laneIdx);
+    
+    // Calculate block coordinates
+    const bx = found.block.startTime * vp.zoom - vp.scrollX + LANE_HEADER_WIDTH;
+    const by = laneY + LANE_PADDING;
+    const bw = (found.block.minDuration + found.block.bufferDuration) * vp.zoom;
+    const bh = this.renderer.getLaneHeight() - LANE_PADDING * 2;
+
+    const canvasRect = this.canvas.getBoundingClientRect();
+
+    // Create inline text input overlay
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = found.block.name;
+    
+    // Style input to overlay block perfectly
+    Object.assign(input.style, {
+      position: 'absolute',
+      left: `${canvasRect.left + bx}px`,
+      top: `${canvasRect.top + by}px`,
+      width: `${bw}px`,
+      height: `${bh}px`,
+      boxSizing: 'border-box',
+      border: '2px solid var(--accent)',
+      borderRadius: 'var(--radius-sm)',
+      background: found.block.color,
+      color: '#ffffff',
+      font: 'bold 11px Inter, system-ui, sans-serif',
+      textAlign: 'center',
+      zIndex: '100',
+      outline: 'none',
+      padding: '0 4px',
+    });
+
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commitChange = () => {
+      const newName = input.value.trim();
+      if (newName) {
+        this.stateManager.updateBlock(blockId, { name: newName });
+      }
+      cleanup();
+    };
+
+    const cleanup = () => {
+      input.removeEventListener('blur', commitChange);
+      input.removeEventListener('keydown', handleKey);
+      input.remove();
+    };
+
+    const handleKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Enter') {
+        commitChange();
+      } else if (ev.key === 'Escape') {
+        cleanup();
+      }
+    };
+
+    input.addEventListener('blur', commitChange);
+    input.addEventListener('keydown', handleKey);
+  }
 
   private duplicateSelected(): void {
     this.clipboard.copy();

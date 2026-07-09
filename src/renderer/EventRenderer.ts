@@ -78,14 +78,14 @@ export class EventRenderer {
     this.ctx.shadowColor = 'transparent';
     this.ctx.shadowBlur = 0;
 
-    if (event.icon) {
-      this.ctx.fillStyle = event.color;
-      this.ctx.font = '11px sans-serif';
-      this.ctx.textAlign = 'left';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText(event.icon, x + s + 3, markerY);
-    }
+    // Render the event's exact time (e.g. "12.5s") next to the diamond marker instead of an icon
+    this.ctx.fillStyle = event.color;
+    this.ctx.font = 'bold 9px Inter, system-ui, sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(`${event.time.toFixed(1)}s`, x + s + 3, markerY);
 
+    // Label (below the diamond, still in header)
     this.ctx.fillStyle = isSelected ? theme.text : theme.textSecondary;
     this.ctx.font = '9px Inter, system-ui, sans-serif';
     this.ctx.textAlign = 'center';
